@@ -1,0 +1,72 @@
+---
+title: "7. 도서관 대출도서 정보"
+output: html_notebook
+---
+
+
+공공도서과 대출 상위 목록은 도서관 정보 나루에서 가져올 수 있다.
+
+http://data4library.kr/
+
+베스트셀로는 교보문고에서 월간 기준으로 가져올 수 있다.
+
+
+도서관 정보 나루에서 API 인증키를 받아 Data를 받아보기
+
+```{r}
+install.packages('httr')
+
+library(httr)
+
+key<-'97c02bfe25c0de474e9dbb83f84b2abcabd0fb8425c74cdac87222093632466e'
+url<-paste0("http://data4library.kr/api/loadItemSrch?authKey=", key , "&startDt=2019-12-01&endDt=2019-12-22&format=json")
+
+GET(url)
+
+```
+
+아직 승인이되지 않아 사용을 못함. 
+Status가 200 이어야 정상상태임.
+
+
+###########################################
+2019년 1월부터 2019년 12월까지 월별로 도서관 정보나루에서 인기대출도서 200위를 받아서 별도 파일에 저장하기
+###########################################
+
+```{r}
+library(httr)
+start_date<-seq(as.Date("2019-01-01"), as.Date("2019-12-01"), by="month")
+end_date<-start_date-1
+baseURL<-"http://data4library.kr/api/loadItemSrch?authKey=97c02bfe25c0de474e9dbb83f84b2abcabd0fb8425c74cdac87222093632466e&format=json"
+
+for(d in 1:11)
+{
+  r<-GET(baseURL, query=list(startDt=start_date[d], endDt=end_date[d+1]))
+  t<-data.frame(ranking=integer(), bookname=character(), authors=character(), count=integer(), isbn=character(), stringsAsFactors = F)
+  cnt<-content(r, "parsed")
+  for(i in 1:200)
+  {
+    t[nrow(t)+1,]<-c(cnt$response$docs[[i]]$doc$ranking, cnt$response$docs[[i]]$doc$bookname, cnt$response$docs[[i]]$doc$authors,cnt$response$docs[[i]]$doc$loan_count, cnt$response$docs[[i]]$doc$isbn13)
+  }
+  fn<-paste("output", start_date[d],sep="/")
+  fn<-paste(fn, "csv", sep=".")
+  write.table(t, fn, sep="|")
+}
+
+    
+  }
+}
+  
+help(GET)
+```
+
+
+
+
+
+
+
+
+
+
+
