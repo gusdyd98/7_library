@@ -19,7 +19,7 @@ install.packages('httr')
 library(httr)
 
 key<-'97c02bfe25c0de474e9dbb83f84b2abcabd0fb8425c74cdac87222093632466e'
-url<-paste0("http://data4library.kr/api/loadItemSrch?authKey=", key , "&startDt=2019-12-01&endDt=2019-12-22&format=json")
+url<-paste0("http://data4library.kr/api/loadItemSrch?authKey=", key , "&startDt=2019-12-01&endDt=2019-12-22")
 
 GET(url)
 
@@ -37,7 +37,8 @@ Status가 200 이어야 정상상태임.
 library(httr)
 start_date<-seq(as.Date("2019-01-01"), as.Date("2019-12-01"), by="month")
 end_date<-start_date-1
-baseURL<-"http://data4library.kr/api/loadItemSrch?authKey=97c02bfe25c0de474e9dbb83f84b2abcabd0fb8425c74cdac87222093632466e&format=json"
+baseURL<-"http://data4library.kr/api/loanItemSrch?authKey=97c02bfe25c0de474e9dbb83f84b2abcabd0fb8425c74cdac87222093632466e&format=json"
+#baseURL<-"http://data4library.kr/api/loanItemSrch?authKey=97c02bfe25c0de474e9dbb83f84b2abcabd0fb8425c74cdac87222093632466e"
 
 for(d in 1:11)
 {
@@ -53,19 +54,96 @@ for(d in 1:11)
   write.table(t, fn, sep="|")
 }
 
-    
-  }
-}
-  
-help(GET)
 ```
 
 
+============================================
+교보문고 베스트셀러 가져오기
+http://www.kyobobook.co.kr/bestSellerNew/bestseller.laf에 있다고 함
 
 
+```{r}
+library(rvest)
 
 
+baseURL<-"data/교보문고_종합 베스트_월간_2019년_11월_분야 종합201912242259.xls"
 
+
+kb<-read_html(baseURL, encoding="cp949")
+
+kb %>% html_table()
+t<-html_table(kb)
+str(t)
+
+t2<-t[[1]]
+str(t2)
+t3<-t2[-c(1,2,3)]
+t3<-t2
+str(t3)
+t2[c(2),]
+colnames(t3)<-t2[c(2),]
+t2[c(2),]
+str(t3)
+t3<-t3[-c(1,2,3),]
+str(t3)
+
+write.csv(t3,"data/bestseller.csv")
+
+```
+
+=========================
+도서관 대출인기도서와 교보문고 베스트셀러 상관성 조사
+=========================
+
+```{r}
+library(rvest)
+library(plyr)
+
+loan<-seq(as.Date("2015-03-01"), as.Date("2017-06-01"), by="month")
+seller<-seq(as.Date("2014-04-01"), as.Date("2017-06-01"), by="month")
+
+count<-c()
+for(i in 1:28)
+{
+  loan_file<-paste("data/bestseller", loan[i], sep="/")
+  loan_file<-paste(loan_file, "csv", sep=".")
+  loan_table<-read.csv(loan_file, header=T, sep="|", colClasses=c("isbn"="character"))
+  for(j in 0:11)
+  {
+    seller_file<-paste("data/bestseller/kb", seller[i+j], sep="-")
+    seller_file<-paste(seller_file, "xls", sep=".")
+    seller_html<-read_html(seller_file, encoding="cp949")
+    t<-html_table(seller_html)
+    t2<-t[[1]]
+    t3<-t2[-c(1,2,3),]
+    colnames(t3)<-t2[c(2),]
+    if(j==0) {
+      seller_table<-t3
+      
+    }
+    else
+    {
+      seller_table<-rbind(seller_table, t3)
+      
+    }
+  }
+  seller_table2<-ddply(seller_table, c("ISBN"), summarize, num=length(ISBN))
+  colnames(seller_table2)[1]<-"isbn"
+  count<- c(count, nrow(merge(loan_table, seller_table2, by="isbn")))
+}
+
+loan_seller<-data.frame(loan, count)
+
+library(ggplot2)
+ggplot(loan_seller, aes(loan, count)) + geom_bar(stat="identity")
+
+```
+
+
+```{r}
+head(seller_table2)
+
+```
 
 
 
